@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gato do dia</title>
+</head>
+<body style="font-family:system-ui; max-width:720px; margin:40px auto;">
+  <h1>🐱 Gato do dia</h1>
+  <button onclick="loadCat()">Novo gato</button>
+  <p id="status">Carregando...</p>
+  <img id="cat" style="width:100%; border-radius:16px;" />
+
+  <script>
+    async function loadCat() {
+      document.getElementById("status").textContent = "Buscando...";
+      const res = await fetch("/api/cat");
+      const data = await res.json();
+      document.getElementById("cat").src = data.url;
+      document.getElementById("status").textContent = "Pronto";
+    }
+    loadCat();
+  </script>
+</body>
+</html>
