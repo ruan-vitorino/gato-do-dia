@@ -223,7 +223,7 @@
     // ---- Storage keys
     const KEY_SEEN = "gato_seen_total_v1";
     const KEY_FAVS = "gato_favs_v1";
-
+  
     // ---- Elements
     const img = document.getElementById("cat");
     const skel = document.getElementById("skel");
@@ -231,42 +231,43 @@
     const hintEl = document.getElementById("hint");
     const metaEl = document.getElementById("meta");
     const seenPill = document.getElementById("seenPill");
+    const globalPill = document.getElementById("globalPill");
     const favPill = document.getElementById("favPill");
-
+  
     const btnNew = document.getElementById("btnNew");
     const btnCopy = document.getElementById("btnCopy");
     const btnDownload = document.getElementById("btnDownload");
     const btnFav = document.getElementById("btnFav");
     const breedSelect = document.getElementById("breedSelect");
-
+  
     const tabHome = document.getElementById("tabHome");
     const tabFavs = document.getElementById("tabFavs");
     const homeView = document.getElementById("homeView");
     const favView = document.getElementById("favView");
-
+  
     const favGrid = document.getElementById("favGrid");
     const favEmpty = document.getElementById("favEmpty");
     const btnClearFavs = document.getElementById("btnClearFavs");
-
+  
     // ---- State
     let lastUrl = "";
     let lastId = "";
     let lastBreed = null;
-
+  
     // ---- Helpers
     function setStatus(text, kind = "") {
       statusEl.className = "status " + kind;
       statusEl.textContent = text;
     }
-
+  
     function getSeenTotal() {
       return Number(localStorage.getItem(KEY_SEEN) || "0");
     }
     function setSeenTotal(n) {
       localStorage.setItem(KEY_SEEN, String(n));
-      seenPill.textContent = "Vistos: " + n;
+      seenPill.textContent = "Vistos por você: " + n;
     }
-
+  
     function getFavs() {
       try { return JSON.parse(localStorage.getItem(KEY_FAVS) || "[]"); }
       catch { return []; }
@@ -275,23 +276,47 @@
       localStorage.setItem(KEY_FAVS, JSON.stringify(arr));
       favPill.textContent = "Favoritos: " + arr.length;
     }
-
+  
     function isFav(id) {
       return getFavs().some(x => x.id === id);
     }
-
+  
     function updateFavButton() {
       if (!lastId) return;
       const fav = isFav(lastId);
       btnFav.textContent = fav ? "Remover ⭐" : "Favoritar ⭐";
     }
-
+  
+    // ---- Global counter (all users)
+    async function refreshGlobal() {
+      try {
+        const r = await fetch("/api/global", { cache: "no-store" });
+        if (!r.ok) throw new Error();
+        const j = await r.json();
+        globalPill.textContent = "Vistos por todos: " + j.total;
+      } catch {
+        globalPill.textContent = "Vistos por todos: —";
+      }
+    }
+  
+    async function incrGlobal() {
+      try {
+        const r = await fetch("/api/seen", { method: "POST" });
+        if (!r.ok) throw new Error();
+        const j = await r.json();
+        globalPill.textContent = "Vistos por todos: " + j.total;
+      } catch {
+        // silencioso
+      }
+    }
+  
     // ---- API
     async function loadBreeds() {
       try {
         const res = await fetch("/api/breeds", { cache: "no-store" });
         if (!res.ok) throw new Error("HTTP " + res.status);
         const breeds = await res.json();
+  
         for (const b of breeds) {
           const opt = document.createElement("option");
           opt.value = b.id;
@@ -302,10 +327,10 @@
         console.warn("Breeds fail:", e);
       }
     }
-
+  
     async function loadCat() {
       const breedId = breedSelect.value;
-
+  
       setStatus("Buscando...", "");
       hintEl.textContent = "Carregando imagem...";
       btnNew.disabled = true;
@@ -313,31 +338,32 @@
       btnDownload.disabled = true;
       btnFav.disabled = true;
       skel.style.display = "block";
-
+  
       try {
         const url = "/api/cat" + (breedId ? `?breed_id=${encodeURIComponent(breedId)}` : "");
         const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) throw new Error("HTTP " + res.status);
-
+  
         const data = await res.json();
         lastUrl = data.url;
         lastId = data.id || "";
         lastBreed = data.breed;
-
+  
         await new Promise((resolve, reject) => {
           img.onload = resolve;
           img.onerror = reject;
           img.src = data.url + (data.url.includes("?") ? "&" : "?") + "t=" + Date.now();
         });
-
+  
         const w = data.width || "—";
         const h = data.height || "—";
         const breedText = lastBreed?.name ? ` • ${lastBreed.name}` : "";
         metaEl.textContent = `id: ${lastId || "—"} • ${w}×${h}${breedText}`;
-
-        // contador de vistos
+  
+        // contador local + global
         setSeenTotal(getSeenTotal() + 1);
-
+        incrGlobal();
+  
         updateFavButton();
         setStatus("Pronto.", "ok");
         hintEl.textContent = "Atalhos: N novo • D download • F favoritar";
@@ -352,7 +378,7 @@
         btnNew.disabled = false;
       }
     }
-
+  
     async function copyLink() {
       if (!lastUrl) return;
       try {
@@ -363,20 +389,20 @@
         setStatus("Não consegui copiar (bloqueio do navegador).", "err");
       }
     }
-
+  
     // download via backend (sem CORS)
     function downloadImage() {
       if (!lastUrl) return;
       const u = "/api/download?url=" + encodeURIComponent(lastUrl);
       window.open(u, "_blank");
     }
-
+  
     function toggleFav() {
       if (!lastId || !lastUrl) return;
-
+  
       const favs = getFavs();
       const idx = favs.findIndex(x => x.id === lastId);
-
+  
       if (idx >= 0) {
         favs.splice(idx, 1);
         setStatus("Removido dos favoritos.", "ok");
@@ -390,13 +416,13 @@
         });
         setStatus("Adicionado aos favoritos.", "ok");
       }
-
+  
       setFavs(favs);
       updateFavButton();
       renderFavs();
       setTimeout(() => setStatus("Pronto.", "ok"), 1200);
     }
-
+  
     // ---- Tabs
     function showHome() {
       tabHome.classList.add("active");
@@ -411,40 +437,41 @@
       favView.style.display = "";
       renderFavs();
     }
-
+  
     // ---- Favorites UI
     function renderFavs() {
       const favs = getFavs();
       favPill.textContent = "Favoritos: " + favs.length;
-
+  
       favGrid.innerHTML = "";
       favEmpty.style.display = favs.length ? "none" : "";
-
+  
       for (const f of favs) {
         const card = document.createElement("div");
         card.className = "favCard";
-
+  
         const im = document.createElement("img");
         im.className = "thumb";
         im.alt = "Favorito " + f.id;
         im.src = f.url;
-
+  
         const meta = document.createElement("div");
         meta.className = "favMeta";
+  
         const title = document.createElement("div");
         title.textContent = (f.breed ? f.breed + " • " : "") + "id: " + f.id;
-
+  
         const btns = document.createElement("div");
         btns.className = "favBtns";
-
+  
         const bOpen = document.createElement("button");
         bOpen.textContent = "Abrir";
         bOpen.onclick = () => window.open(f.url, "_blank");
-
+  
         const bDown = document.createElement("button");
         bDown.textContent = "Baixar";
         bDown.onclick = () => window.open("/api/download?url=" + encodeURIComponent(f.url), "_blank");
-
+  
         const bRemove = document.createElement("button");
         bRemove.textContent = "Remover";
         bRemove.onclick = () => {
@@ -452,55 +479,58 @@
           setFavs(arr);
           renderFavs();
         };
-
+  
         btns.appendChild(bOpen);
         btns.appendChild(bDown);
         btns.appendChild(bRemove);
-
+  
         meta.appendChild(title);
         meta.appendChild(btns);
-
+  
         card.appendChild(im);
         card.appendChild(meta);
-
+  
         favGrid.appendChild(card);
       }
     }
-
+  
     function clearFavs() {
       if (!confirm("Apagar todos os favoritos deste navegador?")) return;
       setFavs([]);
       renderFavs();
     }
-
+  
     // ---- Init
     function initCounters() {
       setSeenTotal(getSeenTotal());
-      setFavs(getFavs()); // só pra atualizar pill
+      setFavs(getFavs()); // atualiza pill
     }
-
+  
     // ---- Events
     btnNew.addEventListener("click", loadCat);
     btnCopy.addEventListener("click", copyLink);
     btnDownload.addEventListener("click", downloadImage);
     btnFav.addEventListener("click", toggleFav);
     breedSelect.addEventListener("change", loadCat);
-
+  
     tabHome.addEventListener("click", showHome);
     tabFavs.addEventListener("click", showFavs);
-
+  
     btnClearFavs.addEventListener("click", clearFavs);
-
+  
     document.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
       if (k === "n") loadCat();
       if (k === "d") downloadImage();
       if (k === "f") toggleFav();
     });
-
+  
     initCounters();
+    refreshGlobal();
     loadBreeds().finally(loadCat);
   </script>
+
 </body>
 </html>
+
 
