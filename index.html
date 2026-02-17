@@ -58,18 +58,26 @@
       flex-wrap:wrap; background:#0b1326;
     }
     .left{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+
+    /* BOTÕES + SELECT (corrige dropdown branco no PC) */
     button, select{
       border:1px solid var(--btnb);
-      background:var(--btn);
+      background:rgba(255,255,255,.10);
       color:var(--text);
       padding:10px 12px;
       border-radius: 12px;
       cursor:pointer;
       font-weight:600;
+      outline:none;
     }
-    select{font-weight:600}
     button:hover, select:hover{background:#ffffff1f}
     button:disabled{opacity:.6; cursor:not-allowed}
+    select{appearance:auto}
+    select option{
+      background:#0b1326;
+      color:var(--text);
+    }
+
     .badge{
       font-size:12px; color:var(--muted);
       padding:6px 10px; border:1px solid #ffffff14;
@@ -167,7 +175,6 @@
           breedSelect.appendChild(opt);
         }
       } catch (e) {
-        // se falhar, o site continua funcionando sem filtro
         console.warn("Breeds fail:", e);
       }
     }
@@ -223,30 +230,11 @@
       }
     }
 
-    async function downloadImage() {
+    // DOWNLOAD via backend (evita erro CORS/Failed to fetch)
+    function downloadImage() {
       if (!lastUrl) return;
-      try {
-        setStatus("Baixando...", "");
-        const r = await fetch(lastUrl, { cache: "no-store" });
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        const blob = await r.blob();
-
-        const a = document.createElement("a");
-        const objUrl = URL.createObjectURL(blob);
-        a.href = objUrl;
-
-        const breedSlug = lastBreed?.name ? lastBreed.name.replace(/\s+/g, "-").toLowerCase() : "cat";
-        a.download = `gato-${breedSlug}.jpg`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(objUrl);
-
-        setStatus("Download pronto.", "ok");
-        setTimeout(() => setStatus("Pronto.", "ok"), 1200);
-      } catch (e) {
-        setStatus("Falhou download: " + e.message, "err");
-      }
+      const u = "/api/download?url=" + encodeURIComponent(lastUrl);
+      window.open(u, "_blank");
     }
 
     btnNew.addEventListener("click", loadCat);
