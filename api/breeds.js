@@ -7,7 +7,6 @@ export default async function handler(req, res) {
     if (!r.ok) return res.status(r.status).json({ error: "TheCatAPI error" });
 
     const data = await r.json();
-    // só o essencial pro dropdown
     const breeds = data
       .map(b => ({ id: b.id, name: b.name, origin: b.origin || "" }))
       .sort((a, b) => a.name.localeCompare(b.name));
