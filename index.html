@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gato do dia</title>
+  <title>Gato do Dia | Para a Mila</title>
 
   <!-- Vercel Web Analytics (HTML) -->
   <script>
@@ -77,8 +77,9 @@
       cursor:pointer;
       font-weight:600;
       outline:none;
+      transition: all 0.2s ease;
     }
-    button:hover, select:hover{background:#ffffff1f}
+    button:hover, select:hover{background:#ffffff1f; transform: scale(1.02);}
     button:disabled{opacity:.6; cursor:not-allowed}
     select{appearance:auto}
     select option{background:#0b1326; color:var(--text)}
@@ -104,7 +105,6 @@
       aspect-ratio:16/10;
       background:#070b14;
     }
-    /* por padrão, mantemos cover (fica bonito) */
     #cat{
       width:100%;
       height:100%;
@@ -112,7 +112,6 @@
       object-fit:cover;
       object-position:center;
     }
-    /* quando a imagem é “difícil” (gif / proporção extrema), mostramos inteira */
     #cat.contain{
       object-fit:contain;
       background:#070b14;
@@ -134,6 +133,42 @@
     a{color:#c7d2fe; text-decoration:none}
     a:hover{text-decoration:underline}
 
+    /* Estilos da Homenagem à Mila */
+    .homenagem {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-left: 4px solid #86efac;
+      padding: 15px 20px;
+      margin: 15px;
+      border-radius: 8px;
+      text-align: left;
+    }
+    .homenagem p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.4;
+      color: #eef2ff;
+    }
+    .btn-secreto {
+      margin-top: 10px;
+      background: rgba(134, 239, 172, 0.1);
+      border: 1px solid rgba(134, 239, 172, 0.3);
+      color: #86efac;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+    .btn-secreto:hover {
+      background: rgba(134, 239, 172, 0.2);
+    }
+    #msg-secreta {
+      display: none;
+      margin-top: 10px;
+      font-size: 14px;
+      color: #fca5a5;
+      font-style: italic;
+      font-weight: bold;
+    }
+
     /* Favoritos */
     .favWrap{padding:14px}
     .favHeader{
@@ -151,7 +186,6 @@
       overflow:hidden;
       background:#0b1326;
     }
-    /* thumbs mantêm grid bonito: quadrado + cover */
     .thumb{
       width:100%;
       aspect-ratio: 1 / 1;
@@ -178,8 +212,8 @@
   <div class="wrap">
     <div class="top">
       <div>
-        <h1>🐱 Gato do dia</h1>
-        <div class="sub">Imagem aleatória via TheCatAPI.</div>
+        <h1>🐱 Gato do Dia | Um sorriso para a Mila 💙</h1>
+        <div class="sub">Porque todo mundo precisa de um pouco de fofura.</div>
       </div>
       <div class="pillRow">
         <div class="pill" id="meta">—</div>
@@ -214,6 +248,13 @@
             <button id="btnResetLocal">Resetar meus dados</button>
           </div>
           <div class="status" id="hint">Atalhos: N novo • D download • F favoritar</div>
+        </div>
+
+        <!-- Homenagem à Mila -->
+        <div class="homenagem">
+          <p>Fiz essa pequena atualização no site pensando em você, Mila. Espero que esses gatinhos te tragam alguns sorrisos hoje. Você é incrível e muito forte. Não se esqueça disso! 🐾</p>
+          <button class="btn-secreto" onclick="revelarSegredo()">Não clique aqui</button>
+          <div id="msg-secreta">Sério, eu admiro demais o seu jeitinho. Um dia de cada vez! ✨🐱</div>
         </div>
 
         <div class="imgWrap">
@@ -271,6 +312,16 @@
     const favGrid = document.getElementById("favGrid");
     const favEmpty = document.getElementById("favEmpty");
     const btnClearFavs = document.getElementById("btnClearFavs");
+
+    // ---- Revelar Segredo Mila
+    function revelarSegredo() {
+      const msg = document.getElementById("msg-secreta");
+      if (msg.style.display === "none" || msg.style.display === "") {
+        msg.style.display = "block";
+      } else {
+        msg.style.display = "none";
+      }
+    }
 
     // ---- State
     let lastUrl = "";
@@ -331,7 +382,6 @@
       } catch {}
     }
 
-    // Atualiza global automaticamente:
     function setupGlobalAutoRefresh() {
       refreshGlobal();
       setInterval(refreshGlobal, 10000);
@@ -357,15 +407,12 @@
 
     // ---- Image fitting (evitar gato cortado)
     function shouldContain(url, w, h) {
-      // GIF quase sempre fica melhor em contain
       const isGif = (url || "").toLowerCase().includes(".gif");
       if (isGif) return true;
 
       if (!w || !h) return false;
       const r = w / h;
 
-      // Proporções muito “extremas” → contain
-      // (evita cortar demais em imagens muito altas ou muito largas)
       if (r < 0.90 || r > 1.90) return true;
 
       return false;
@@ -415,7 +462,6 @@
         lastId = data.id || "";
         lastBreed = data.breed;
 
-        // Decide o fit ANTES de carregar (evita “piscada”)
         applyFitMode(data.url, data.width, data.height);
 
         await new Promise((resolve, reject) => {
@@ -424,7 +470,6 @@
           img.src = data.url + (data.url.includes("?") ? "&" : "?") + "t=" + Date.now();
         });
 
-        // Se o backend não mandou width/height, usa naturalWidth/Height depois de carregar
         if ((!data.width || !data.height) && img.naturalWidth && img.naturalHeight) {
           applyFitMode(data.url, img.naturalWidth, img.naturalHeight);
         }
@@ -434,7 +479,6 @@
         const breedText = lastBreed?.name ? ` • ${lastBreed.name}` : "";
         metaEl.textContent = `id: ${lastId || "—"} • ${w}×${h}${breedText}`;
 
-        // contador local + global
         setSeenTotal(getSeenTotal() + 1);
         incrGlobal();
 
@@ -464,7 +508,6 @@
       }
     }
 
-    // download via backend (sem CORS)
     function downloadImage() {
       if (!lastUrl) return;
       const u = "/api/download?url=" + encodeURIComponent(lastUrl);
